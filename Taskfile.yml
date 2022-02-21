@@ -1,0 +1,54 @@
+version: '3'
+
+vars:
+  OUTPUT_DIR: build
+  ASM_DIR: asm
+  TARGET_DIR: target
+  ASM_EX: .asm
+  BIN_EX: .bin
+  NASM: nasm -f bin -o
+  LD: ld -v -nostdlib -m elf_i386 -Tdata=0x00310000 -T kernel.ld
+  ASMS: |
+    asmhead
+    ipl
+  IMG_FILE: haribote.img
+  KERNEL_FILE: kernel{{$.BIN_EX}}
+  SYS_FILE: haribote.sys
+
+tasks:
+  asm:
+    deps: [clear]
+    cmds:
+      - |
+        {{range .ASMS | splitLines -}}
+        {{if .}}{{$.NASM}} {{$.OUTPUT_DIR}}/{{.}}{{$.BIN_EX}} {{$.ASM_DIR}}/{{.}}{{$.ASM_EX}}{{end}}
+        {{end -}}
+
+  rustb:
+    deps: [asm]
+    cmds:
+      - cargo xbuild
+
+  link:
+    deps: [rustb]
+    cmds:
+      - '{{$.LD}} {{$.TARGET_DIR}}/i686-haribote/debug/libharibote_rs.a -o {{$.OUTPUT_DIR}}/{{$.KERNEL_FILE}}'
+      - cat {{$.OUTPUT_DIR}}/asmhead.bin {{$.OUTPUT_DIR}}/{{$.KERNEL_FILE}} > {{$.OUTPUT_DIR}}/{{$.SYS_FILE}}
+
+  img:
+    deps: [link]
+    cmds:
+      - 'mformat -f 1440 -C -B {{$.OUTPUT_DIR}}/ipl.bin -i {{$.OUTPUT_DIR}}/{{$.IMG_FILE}} ::'
+      - 'mcopy {{$.OUTPUT_DIR}}/{{$.SYS_FILE}} -i {{$.OUTPUT_DIR}}/{{$.IMG_FILE}} ::'
+
+  build:
+    deps: [img]
+
+  run:
+    deps: [build]
+    cmds:
+      - qemu-system-i386 -fda {{$.OUTPUT_DIR}}/{{$.IMG_FILE}}
+
+  clear:
+    cmds:
+      - rm -rf build/*
