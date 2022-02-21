@@ -11,11 +11,10 @@ fn hlt()
 }
 
 #[no_mangle]
-fn show_white(i: u32)
+fn show_color(index: u32, color_code: u8)
 {
-    let a: u8 = 15;
-    let ptr = unsafe { &mut *(i as *mut u8) };
-    *ptr = a;
+    let ptr = unsafe { &mut *(index as *mut u8) };
+    *ptr = color_code;
 }
 
 #[no_mangle]
@@ -24,7 +23,7 @@ pub extern "C" fn haribote_os() -> !
 {
     for i in 0xa000..0xaffff
     {
-        show_white(i);
+        show_color(i, (i & 0x0f) as u8);
     }
     loop { hlt(); }
 }
