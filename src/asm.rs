@@ -1,29 +1,47 @@
 use core::arch::asm;
 
-pub fn load_eflags() -> i32 {
-    let result: i32;
-    unsafe {
-        asm!("PUSHFD" : : : : "intel");
-        asm!("POP EAX" : "={EAX}"(result) : : : "intel");
+pub fn load_eflags() -> i32
+{
+    let mut result;
+
+    unsafe
+    {
+        asm!("pushfd");
+        asm!("pop {}", out(reg) result);
     }
-    result
+    return result;
 }
 
-pub fn store_eflags(flags: i32) {
-    unsafe {
-        asm!("PUSH EAX" : : "EAX"(flags) : : "intel");
-        asm!("POPFD");
+pub fn store_eflags(flags: i32)
+{
+    unsafe
+    {
+        asm!("mov eax, {}", in(reg) flags);
+        asm!("push eax");
+        asm!("popfd");
     }
 }
 
-pub fn cli() {
-    unsafe {
-        asm!("CLI" : : : : "intel");
+pub fn hlt()
+{
+    unsafe
+    {
+        asm!("hlt");
     }
 }
 
-pub fn out8(port: u32, data: u8) {
-    unsafe {
-        asm!("OUT DX,AL" : : "{EDX}"(port), "{AL}"(data) : : "intel");
+pub fn cli()
+{
+    unsafe
+    {
+        asm!("cli");
+    }
+}
+
+pub fn out8(port: u32, data: u8)
+{
+    unsafe
+    {
+        asm!("out dx, al", in("edx") port, in("al") data);
     }
 }
