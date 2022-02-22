@@ -5,7 +5,7 @@
 use core::{panic::PanicInfo};
 
 use asm::{hlt};
-use vga::set_palette;
+use vga::{set_palette, boxfill8, Color};
 
 mod asm;
 mod vga;
@@ -15,11 +15,12 @@ mod vga;
 pub extern "C" fn haribote_os() -> !
 {
     set_palette(0, 15);
-    for i in 0xa000..0xaffff
-    {
-        let vram = unsafe { &mut *(i as *mut u8) };
-        *vram = i as u8 & 0x0f;
-    }
+    let vram = unsafe { &mut *(0xa0000 as *mut u8) };
+
+    boxfill8(vram, 320, Color::LightRed, 20, 20, 120, 120);
+    boxfill8(vram, 320, Color::LightGreen, 70, 50, 170, 150);
+    boxfill8(vram, 320, Color::LightBlue, 120, 80, 220, 180);
+
     loop { hlt(); }
 }
 
