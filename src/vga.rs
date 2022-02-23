@@ -43,28 +43,77 @@ const RGB_TABLE: [[u8; 3]; 16] =
         [0x84, 0x84, 0x84] // 暗い灰色
     ];
 
-pub fn set_palette(start: u32, end: u32)
+pub struct Screen
 {
-    let rgb = &RGB_TABLE;
-    let eflags = load_eflags();
-    out8(0x03c8, start as u8);
-
-    for i in start..end+1
-    {
-        out8(0x03c9, rgb[i as usize][0] / 4);
-        out8(0x03c9, rgb[i as usize][1] / 4);
-        out8(0x03c9, rgb[i as usize][2] / 4);
-    }
+    pub scrnx: i16,
+    pub scrny: i16,
+    pub vram: &'static mut u8
 }
 
-pub fn boxfill8(vram: *mut u8, xsize: isize, color: Color, x0: isize, y0: isize, x1: isize, y1: isize)
+impl Screen
 {
-    for y in y0..=y1
+    pub fn new() -> Screen
     {
-        for x in x0..=x1
+        return Screen
         {
-            let ptr = unsafe { &mut *(vram.offset(y * xsize + x)) };
-            *ptr = color as u8;
+            scrnx: unsafe { *(0x0ff4 as *mut i16) },
+            scrny: unsafe { *(0x0ff6 as *mut i16) },
+            vram: unsafe { &mut *(*(0x0ff8 as *const i32) as *mut u8) }
+        };
+    }
+
+    pub fn init(&mut self)
+    {
+        let xsize = self.scrnx as isize;
+        let ysize = self.scrny as isize;
+
+        self.set_palette();
+        // 背景
+        self.boxfill8(Color::DarkCyan, 0, 0, xsize - 1, ysize - 29);
+
+        // タスクバー
+        self.boxfill8(Color::LightGray, 0, ysize - 28, xsize - 1, ysize - 28);
+        self.boxfill8(Color::White,     0, ysize - 27, xsize - 1, ysize - 27);
+        self.boxfill8(Color::LightGray, 0, ysize - 26, xsize - 1, ysize - 1);
+
+        // スタートボタン？
+        self.boxfill8(Color::White,    3, ysize - 24, 59, ysize - 24);
+        self.boxfill8(Color::White,    2, ysize - 24, 2, ysize - 4);
+        self.boxfill8(Color::DarkGray, 3, ysize - 4, 59, ysize - 4);
+        self.boxfill8(Color::DarkGray, 59, ysize - 23, 59, ysize - 5);
+        self.boxfill8(Color::Black,    2, ysize - 3, 59, ysize - 3);
+        self.boxfill8(Color::Black,    60, ysize - 24, 60, ysize - 3);
+
+        // 通知
+        self.boxfill8(Color::DarkGray, xsize - 47, ysize - 24, xsize - 4, ysize - 24);
+        self.boxfill8(Color::DarkGray, xsize - 47, ysize - 23, xsize - 47, ysize - 4);
+        self.boxfill8(Color::White,    xsize - 47, ysize - 3, xsize - 4, ysize - 3);
+        self.boxfill8(Color::White,    xsize - 3, ysize - 24, xsize - 3, ysize - 3);
+    }
+
+    pub fn boxfill8(&mut self, color: Color, x0: isize, y0: isize, x1: isize, y1: isize)
+    {
+        for y in y0..=y1
+        {
+            for x in x0..=x1
+            {
+                let ptr = unsafe { &mut *((self.vram as *mut u8).offset(y * self.scrnx as isize + x)) };
+                *ptr = color as u8;
+            }
+        }
+    }
+
+    fn set_palette(&self)
+    {
+        let rgb = &RGB_TABLE;
+        let eflags = load_eflags();
+        out8(0x03c8, 0);
+
+        for i in 0..16
+        {
+            out8(0x03c9, rgb[i as usize][0] / 4);
+            out8(0x03c9, rgb[i as usize][1] / 4);
+            out8(0x03c9, rgb[i as usize][2] / 4);
         }
     }
 }
