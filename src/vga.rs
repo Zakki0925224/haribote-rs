@@ -24,24 +24,24 @@ pub enum Color
 }
 
 const RGB_TABLE: [[u8; 3]; 16] =
-    [
-        [0x00, 0x00, 0x00], // 黒
-        [0xff, 0x00, 0x00], // 明るい赤
-        [0x00, 0xff, 0x00], // 明るい緑
-        [0xff, 0xff, 0x00], // 明るい黄色
-        [0x00, 0x00, 0xff], // 明るい青
-        [0xff, 0x00, 0xff], // 明るい紫
-        [0x00, 0xff, 0xff], // 明るい水色
-        [0xff, 0xff, 0xff], // 白
-        [0xc6, 0xc6, 0xc6], // 明るい灰色
-        [0x84, 0x00, 0x00], // 暗い赤
-        [0x00, 0x84, 0x00], // 暗い緑
-        [0x84, 0x84, 0x00], // 暗い黄色
-        [0x00, 0x00, 0x84], // 暗い青
-        [0x84, 0x00, 0x84], // 暗い紫
-        [0x00, 0x84, 0x84], // 暗い水色
-        [0x84, 0x84, 0x84] // 暗い灰色
-    ];
+[
+    [0x00, 0x00, 0x00], // 黒
+    [0xff, 0x00, 0x00], // 明るい赤
+    [0x00, 0xff, 0x00], // 明るい緑
+    [0xff, 0xff, 0x00], // 明るい黄色
+    [0x00, 0x00, 0xff], // 明るい青
+    [0xff, 0x00, 0xff], // 明るい紫
+    [0x00, 0xff, 0xff], // 明るい水色
+    [0xff, 0xff, 0xff], // 白
+    [0xc6, 0xc6, 0xc6], // 明るい灰色
+    [0x84, 0x00, 0x00], // 暗い赤
+    [0x00, 0x84, 0x00], // 暗い緑
+    [0x84, 0x84, 0x00], // 暗い黄色
+    [0x00, 0x00, 0x84], // 暗い青
+    [0x84, 0x00, 0x84], // 暗い紫
+    [0x00, 0x84, 0x84], // 暗い水色
+    [0x84, 0x84, 0x84] // 暗い灰色
+];
 
 pub struct Screen
 {
@@ -100,6 +100,26 @@ impl Screen
                 let ptr = unsafe { &mut *((self.vram as *mut u8).offset(y * self.scrnx as isize + x)) };
                 *ptr = color as u8;
             }
+        }
+    }
+
+    pub fn pubfont8(&mut self, x: isize, y: isize, color: Color, font: &[u8])
+    {
+        let color = color as u8;
+
+        for i in 0..font.len()
+        {
+            let f = font[i];
+            let offset = (y + i as isize) * self.scrnx as isize + x;
+
+            if (f & 0x80) != 0 { *unsafe { &mut *((self.vram as *mut u8).offset(offset)) } = color; }
+            if (f & 0x40) != 0 { *unsafe { &mut *((self.vram as *mut u8).offset(offset + 1)) } = color; }
+            if (f & 0x20) != 0 { *unsafe { &mut *((self.vram as *mut u8).offset(offset + 2)) } = color; }
+            if (f & 0x10) != 0 { *unsafe { &mut *((self.vram as *mut u8).offset(offset + 3)) } = color; }
+            if (f & 0x08) != 0 { *unsafe { &mut *((self.vram as *mut u8).offset(offset + 4)) } = color; }
+            if (f & 0x04) != 0 { *unsafe { &mut *((self.vram as *mut u8).offset(offset + 5)) } = color; }
+            if (f & 0x02) != 0 { *unsafe { &mut *((self.vram as *mut u8).offset(offset + 6)) } = color; }
+            if (f & 0x01) != 0 { *unsafe { &mut *((self.vram as *mut u8).offset(offset + 7)) } = color; }
         }
     }
 
