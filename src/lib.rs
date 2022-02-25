@@ -18,11 +18,11 @@ pub extern "C" fn haribote_os() -> !
 {
     let mut screen = Screen::new();
     screen.init();
-    screen.pubfont8(10, 10, Color::White, &FONTPACK['@' as usize]);
-    screen.pubfont8(20, 10, Color::White, &FONTPACK['%' as usize]);
-    screen.pubfont8(30, 10, Color::White, &FONTPACK['$' as usize]);
-    screen.pubfont8(40, 10, Color::White, &FONTPACK['&' as usize]);
-    screen.pubfont8(50, 10, Color::White, &FONTPACK['Z' as usize]);
+    screen.pubfont8(10, 10, Color::White, &FONTPACK['A' as usize]);
+    screen.pubfont8(20, 10, Color::White, &FONTPACK['B' as usize]);
+    screen.pubfont8(30, 10, Color::White, &FONTPACK['C' as usize]);
+    screen.pubfont8(40, 10, Color::White, &FONTPACK['D' as usize]);
+    screen.pubfont8(50, 10, Color::White, &FONTPACK['E' as usize]);
 
     loop { hlt(); }
 }
