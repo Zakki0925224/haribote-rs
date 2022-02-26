@@ -2,11 +2,10 @@
 #![feature(asm)]
 #![feature(start)]
 
-use core::{panic::PanicInfo};
+use core::{panic::PanicInfo, fmt::Write};
 
 use asm::{hlt};
-use font::FONTPACK;
-use vga::{Screen, Color};
+use vga::{Screen, Color, ScreenWriter};
 
 mod asm;
 mod font;
@@ -18,11 +17,8 @@ pub extern "C" fn haribote_os() -> !
 {
     let mut screen = Screen::new();
     screen.init();
-    screen.pubfont8(10, 10, Color::White, &FONTPACK['A' as usize]);
-    screen.pubfont8(20, 10, Color::White, &FONTPACK['B' as usize]);
-    screen.pubfont8(30, 10, Color::White, &FONTPACK['C' as usize]);
-    screen.pubfont8(40, 10, Color::White, &FONTPACK['D' as usize]);
-    screen.pubfont8(50, 10, Color::White, &FONTPACK['E' as usize]);
+    let mut writer = ScreenWriter::new(screen, Color::White, 10, 10);
+    write!(writer, "Hello, world!\naaa").unwrap();
 
     loop { hlt(); }
 }

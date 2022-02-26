@@ -1,4 +1,9 @@
-use crate::asm::{load_eflags, out8};
+use core::fmt;
+
+use crate::{asm::{load_eflags, out8}, font::FONTPACK};
+
+const FONT_HEIGHT: usize = 16;
+const FONT_WIDTH: usize = 8;
 
 #[allow(dead_code)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -103,7 +108,7 @@ impl Screen
         }
     }
 
-    pub fn pubfont8(&mut self, x: isize, y: isize, color: Color, font: &[u8])
+    pub fn putfont8(&mut self, x: isize, y: isize, color: Color, font: &[u8])
     {
         let color = color as u8;
 
@@ -123,6 +128,18 @@ impl Screen
         }
     }
 
+    pub fn putfont8_asc(&mut self, x: isize, y: isize, color: Color, strs: &str)
+    {
+        let mut x = x;
+
+        for i in 0..strs.len()
+        {
+            let c = strs.as_bytes()[i] as usize;
+            self.putfont8(x, y, color, &FONTPACK[c]);
+            x += 8;
+        }
+    }
+
     fn set_palette(&self)
     {
         let rgb = &RGB_TABLE;
@@ -135,5 +152,86 @@ impl Screen
             out8(0x03c9, rgb[i as usize][1] / 4);
             out8(0x03c9, rgb[i as usize][2] / 4);
         }
+    }
+}
+
+pub struct ScreenWriter
+{
+    initial_x: usize,
+    x: usize,
+    y: usize,
+    color: Color,
+    screen: Screen,
+}
+
+impl ScreenWriter
+{
+    pub fn new(screen: Screen, color: Color, x: usize, y: usize) -> ScreenWriter
+    {
+        return ScreenWriter
+        {
+            initial_x: x,
+            x,
+            y,
+            color,
+            screen,
+        };
+    }
+
+    fn newline(&mut self)
+    {
+        self.x = self.initial_x;
+        self.y = self.y + FONT_HEIGHT;
+    }
+}
+
+impl fmt::Write for ScreenWriter
+{
+    fn write_str(&mut self, s: &str) -> fmt::Result
+    {
+        let str_bytes = s.as_bytes();
+        let height = self.screen.scrny as usize;
+        let width = self.screen.scrnx as usize;
+
+        for i in 0..str_bytes.len()
+        {
+            if str_bytes[i] == b'\n'
+            {
+                self.newline();
+                continue;
+            }
+            if str_bytes[i] == b'\t'
+            {
+                self.write_str("    ");
+                continue;
+            }
+
+            if self.x + FONT_WIDTH < width && self.y + FONT_HEIGHT < height
+            {
+                self.screen
+                    .putfont8(self.x as isize, self.y as isize, self.color, &FONTPACK[str_bytes[i] as usize]);
+            }
+            else if self.y + FONT_HEIGHT * 2 < height
+            {
+                self.newline();
+                self.screen
+                .putfont8(self.x as isize, self.y as isize, self.color, &FONTPACK[str_bytes[i] as usize]);
+            }
+            if self.x + FONT_WIDTH < width
+            {
+                self.x = self.x + FONT_WIDTH;
+            }
+            else if self.y + FONT_HEIGHT < height
+            {
+                self.newline();
+            }
+            else
+            {
+                self.x = width;
+                self.y = height;
+            }
+        }
+
+        return Ok(());
     }
 }
