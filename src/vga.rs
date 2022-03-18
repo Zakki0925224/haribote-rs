@@ -4,6 +4,8 @@ use crate::{asm::{load_eflags, out8}, font::FONTPACK};
 
 const FONT_HEIGHT: usize = 16;
 const FONT_WIDTH: usize = 8;
+const CURSOR_HEIGHT: usize = 16;
+const CURSOR_WIDTH: usize = 16;
 
 #[allow(dead_code)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -52,7 +54,8 @@ pub struct Screen
 {
     pub scrnx: i16,
     pub scrny: i16,
-    pub vram: &'static mut u8
+    pub vram: &'static mut u8,
+    pub mouse: [[Color; CURSOR_WIDTH]; CURSOR_HEIGHT]
 }
 
 impl Screen
@@ -63,7 +66,8 @@ impl Screen
         {
             scrnx: unsafe { *(0x0ff4 as *mut i16) },
             scrny: unsafe { *(0x0ff6 as *mut i16) },
-            vram: unsafe { &mut *(*(0x0ff8 as *const i32) as *mut u8) }
+            vram: unsafe { &mut *(*(0x0ff8 as *const i32) as *mut u8) },
+            mouse: [[Color::DarkCyan; CURSOR_WIDTH]; CURSOR_HEIGHT]
         };
     }
 
@@ -94,6 +98,10 @@ impl Screen
         self.boxfill8(Color::DarkGray, xsize - 47, ysize - 23, xsize - 47, ysize - 4);
         self.boxfill8(Color::White,    xsize - 47, ysize - 3, xsize - 4, ysize - 3);
         self.boxfill8(Color::White,    xsize - 3, ysize - 24, xsize - 3, ysize - 3);
+
+        // カーソル
+        self.init_cursor();
+        self.putblock8(self.mouse, (self.scrnx / 2) as isize, (self.scrny / 2) as isize);
     }
 
     pub fn boxfill8(&mut self, color: Color, x0: isize, y0: isize, x1: isize, y1: isize)
@@ -140,6 +148,18 @@ impl Screen
         }
     }
 
+    fn putblock8(&mut self, img: [[Color; 16]; 16], x: isize, y: isize)
+    {
+        for i in 0..16
+        {
+            for j in 0..16
+            {
+                let ptr = unsafe { &mut *((self.vram as *mut u8).offset((y + i) * self.scrnx as isize + (x + j))) };
+                *ptr = img[i as usize][j as usize] as u8;
+            }
+        }
+    }
+
     fn set_palette(&self)
     {
         let rgb = &RGB_TABLE;
@@ -151,6 +171,42 @@ impl Screen
             out8(0x03c9, rgb[i as usize][0] / 4);
             out8(0x03c9, rgb[i as usize][1] / 4);
             out8(0x03c9, rgb[i as usize][2] / 4);
+        }
+    }
+
+    fn init_cursor(&mut self)
+    {
+        let cursor: [[u8; CURSOR_WIDTH]; CURSOR_HEIGHT] =
+        [
+            *b"**************..",
+            *b"*OOOOOOOOOOO*...",
+            *b"*OOOOOOOOOO*....",
+            *b"*OOOOOOOOO*.....",
+            *b"*OOOOOOOO*......",
+            *b"*OOOOOOO*.......",
+            *b"*OOOOOOO*.......",
+            *b"*OOOOOOOO*......",
+            *b"*OOOO**OOO*.....",
+            *b"*OOO*..*OOO*....",
+            *b"*OO*....*OOO*...",
+            *b"*O*......*OOO*..",
+            *b"**........*OOO*.",
+            *b"*..........*OOO*",
+            *b"............*OO*",
+            *b".............***"
+        ];
+
+        for y in 0..CURSOR_WIDTH
+        {
+            for x in 0..CURSOR_HEIGHT
+            {
+                match cursor[y][x]
+                {
+                    b'*' => self.mouse[y][x] = Color::Black,
+                    b'O' => self.mouse[y][x] = Color::White,
+                    _ => ()
+                }
+            }
         }
     }
 }
