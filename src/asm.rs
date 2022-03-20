@@ -38,6 +38,14 @@ pub fn cli()
     }
 }
 
+pub fn sti()
+{
+    unsafe
+    {
+        asm!("sti");
+    }
+}
+
 pub fn out8(port: u32, data: u8)
 {
     unsafe
@@ -70,32 +78,32 @@ pub fn load_idtr(limit: i32, adr: i32)
     }
 }
 
-// #[macro_export]
-// macro_rules! handler
-// {
-//     ($name: ident) =>
-//     {{
-//         pub extern "C" fn wrapper() -> !
-//         {
-//             unsafe
-//             {
-//                 asm!("PUSH ES
-//                       PUSH DS
-//                       PUSHAD
-//                       MOV EAX,ESP
-//                       PUSH EAX
-//                       MOV AX,SS
-//                       MOV DS,AX
-//                       MOV ES,AX" : : : : "intel", "volatile");
-//                 asm!("CALL $0" : : "r"($name as extern "C" fn()) : : "intel");
-//                 asm!("POP EAX
-//                     POPAD
-//                     POP DS
-//                     POP ES
-//                     IRETD" : : : : "intel", "volatile");
-//                 ::core::intrinsics::unreachable();
-//             }
-//         }
-//         wrapper
-//     }}
-// }
+#[macro_export]
+macro_rules! handler
+{
+    ($name: ident) =>
+    {{
+        pub extern "C" fn wrapper() -> !
+        {
+            unsafe
+            {
+                asm!("push es");
+                asm!("push ds");
+                asm!("pushad");
+                asm!("mov eax, esp");
+                asm!("push eax");
+                asm!("mov ax, ss");
+                asm!("mov ds, ax");
+                asm!("mov es, ax");
+                asm!("call {}", in(reg) $name as extern "C" fn());
+                asm!("pop eax");
+                asm!("popad");
+                asm!("pop ds");
+                asm!("pop es");
+                asm!("iret");
+                ::core::intrinsics::unreachable();
+            }
+        }
+        wrapper
+    }}
+}

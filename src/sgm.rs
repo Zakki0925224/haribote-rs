@@ -1,4 +1,5 @@
 use crate::asm;
+use crate::handler;
 
 #[derive(Debug, Clone, Copy)]
 #[repr(C, packed)]
@@ -61,7 +62,14 @@ impl GateDescriptor
 }
 
 const GDT_ADDR: i32 = 0x00270000;
+const GDT_LIMIT: i32 = 0x0000ffff;
 const IDT_ADDR: i32 = 0x0026f800;
+const IDT_LIMIT: i32 = 0x000007ff;
+const BOTPAK_ADDR: i32 = 0x00280000;
+const BOTPAK_LIMIT: u32 = 0x0007ffff;
+const AR_INTGATE32: i32 = 0x008e;
+const AR_DATA32_RW: i32 = 0x4092;
+const AR_CODE32_ER: i32 = 0x409a;
 
 pub struct Segmentation
 {
@@ -82,28 +90,39 @@ impl Segmentation
 
     pub fn init(&mut self)
     {
+        use crate::int::{inthandler21, inthandler2c};
+        use asm::{load_gdtr, load_idtr};
+        use core::arch::asm;
+
         // gdt初期化
-        for i in 0..8192
+        for i in 0..=(GDT_LIMIT / 8)
         {
             let gdt = unsafe { &mut *((GDT_ADDR + i * 8) as *mut SegmentDescriptor) };
             *gdt = SegmentDescriptor::new(0, 0, 0);
         }
 
         let gdt = unsafe { &mut *((GDT_ADDR + 1 * 8) as *mut SegmentDescriptor) };
-        *gdt = SegmentDescriptor::new(0xffffffff, 0x00000000, 0x4092);
+        *gdt = SegmentDescriptor::new(0xffffffff, 0x00000000, AR_DATA32_RW);
 
         let gdt = unsafe { &mut *((GDT_ADDR + 2 * 8) as *mut SegmentDescriptor) };
-        *gdt = SegmentDescriptor::new(0x0007ffff, 0x00280000, 0x409a);
+        *gdt = SegmentDescriptor::new(BOTPAK_LIMIT, BOTPAK_ADDR, AR_CODE32_ER);
 
-        asm::load_gdtr(0xffff, 0x00270000);
+        load_gdtr(GDT_LIMIT, GDT_ADDR);
 
         // idt初期化
-        for i in 0..256
+        for i in 0..=(IDT_LIMIT / 8)
         {
             let idt = unsafe { &mut *((IDT_ADDR + i * 8) as *mut GateDescriptor) };
             *idt = GateDescriptor::new(0, 0, 0);
         }
 
-        asm::load_idtr(0x7ff, 0x0026f800);
+        load_idtr(IDT_LIMIT, IDT_ADDR);
+
+        // 割り込みの設定
+        let idt = unsafe { &mut *((IDT_ADDR + 0x21 * 8) as *mut GateDescriptor) };
+        *idt = GateDescriptor::new(handler!(inthandler21) as u32, 2 * 8, AR_INTGATE32);
+        let idt = unsafe { &mut *((IDT_ADDR + 0x2c * 8) as *mut GateDescriptor) };
+        *idt = GateDescriptor::new(handler!(inthandler2c) as u32, 2 * 8, AR_INTGATE32);
+        load_idtr(IDT_LIMIT, IDT_ADDR);
     }
 }
