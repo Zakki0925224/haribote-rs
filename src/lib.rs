@@ -12,6 +12,7 @@ mod asm;
 mod font;
 mod vga;
 mod sgm;
+mod int;
 
 #[no_mangle]
 #[start]
@@ -21,6 +22,7 @@ pub extern "C" fn haribote_os() -> !
     screen.init();
     let mut segmentation = Segmentation::new();
     segmentation.init();
+    int::init_pic();
     let mut writer = ScreenWriter::new(screen, Color::White, 10, 10);
     write!(writer, "Hello, world!\naaa").unwrap();
 
