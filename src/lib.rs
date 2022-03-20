@@ -6,10 +6,12 @@ use core::{panic::PanicInfo, fmt::Write};
 
 use asm::{hlt};
 use vga::{Screen, Color, ScreenWriter};
+use sgm::Segmentation;
 
 mod asm;
 mod font;
 mod vga;
+mod sgm;
 
 #[no_mangle]
 #[start]
@@ -17,6 +19,8 @@ pub extern "C" fn haribote_os() -> !
 {
     let mut screen = Screen::new();
     screen.init();
+    let mut segmentation = Segmentation::new();
+    segmentation.init();
     let mut writer = ScreenWriter::new(screen, Color::White, 10, 10);
     write!(writer, "Hello, world!\naaa").unwrap();
 
